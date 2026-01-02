@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareerVerse AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>🎯 CareerVerse AI</h1>
+      <p class="subtitle">Your Universal Career Assistant</p>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="guidance">
+        <span>💡</span> Guidance
+      </button>
+      <button class="tab-btn" data-tab="learn">
+        <span>📚</span> Learn
+      </button>
+      <button class="tab-btn" data-tab="resume">
+        <span>📄</span> Resume
+      </button>
+      <button class="tab-btn" data-tab="opportunities">
+        <span>🌟</span> Opportunities
+      </button>
+    </nav>
+
+    <!-- Tab Contents -->
+    <div class="tab-content">
+      <!-- Guidance Tab -->
+      <div id="guidance" class="tab-pane active">
+        <div class="section">
+          <h2>Career Detection</h2>
+          <div id="context-info" class="context-box">
+            <p>Analyzing current page...</p>
+          </div>
+          <button id="detect-btn" class="primary-btn">🔍 Detect Career</button>
+          <button id="refresh-context-btn" class="secondary-btn">🔄 Refresh Context</button>
+        </div>
+
+        <div class="section">
+          <h3>Or Select Manually</h3>
+          <select id="manual-career-select" class="career-select">
+            <option value="">-- Choose a career --</option>
+            <option value="software">Software / IT</option>
+            <option value="painting">Painting & Arts</option>
+            <option value="accounts">Accounts & Finance</option>
+            <option value="cooking">Cooking & Culinary</option>
+            <option value="business">Business & Startups</option>
+            <option value="medical">Medical & Healthcare</option>
+            <option value="design">Design & Creative</option>
+            <option value="general">General Career</option>
+          </select>
+        </div>
+
+        <div id="guidance-result" class="guidance-result"></div>
+      </div>
+
+      <!-- Learn Tab -->
+      <div id="learn" class="tab-pane">
+        <div class="section">
+          <h2>Learning Path</h2>
+          <select id="learn-career-select" class="career-select">
+            <option value="">-- Select career to learn about --</option>
+            <option value="software">Software / IT</option>
+            <option value="painting">Painting & Arts</option>
+            <option value="accounts">Accounts & Finance</option>
+            <option value="cooking">Cooking & Culinary</option>
+            <option value="business">Business & Startups</option>
+            <option value="medical">Medical & Healthcare</option>
+            <option value="design">Design & Creative</option>
+            <option value="general">General Career</option>
+          </select>
+          <div id="learn-content" class="learn-content"></div>
+        </div>
+      </div>
+
+      <!-- Resume Tab -->
+      <div id="resume" class="tab-pane">
+        <div class="section">
+          <h2>Your Resume</h2>
+          <button id="reset-resume-btn" class="secondary-btn">🔄 Reset Resume</button>
+          <div id="resume-content" class="resume-content"></div>
+        </div>
+      </div>
+
+      <!-- Opportunities Tab -->
+      <div id="opportunities" class="tab-pane">
+        <div class="section">
+          <h2>Career Opportunities</h2>
+          <select id="opportunities-career-select" class="career-select">
+            <option value="">-- Select career domain --</option>
+            <option value="software">Software / IT</option>
+            <option value="painting">Painting & Arts</option>
+            <option value="accounts">Accounts & Finance</option>
+            <option value="cooking">Cooking & Culinary</option>
+            <option value="business">Business & Startups</option>
+            <option value="medical">Medical & Healthcare</option>
+            <option value="design">Design & Creative</option>
+            <option value="general">General Career</option>
+          </select>
+          <div id="opportunities-content" class="opportunities-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+
