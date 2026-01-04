@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "CareerVerse AI",
+  "version": "2.0.0",
+  "description": "Intelligent learning assistant with floating chat interface - Auto-analyzes web pages and provides context-aware guidance",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "scripting"
+  ],
+  "optional_permissions": [
+    "desktopCapture"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
