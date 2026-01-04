@@ -1,154 +1,227 @@
 # CareerVerse AI - Chrome Extension
 
-**Universal Career Assistant** - Get personalized career guidance, learning paths, and build your resume automatically across multiple career domains.
+**Intelligent Learning Assistant** - Floating AI assistant that auto-analyzes web pages and provides context-aware guidance, just like Leeco AI.
 
 ## 🎯 Features
 
-- **Context Detection**: Automatically detects your career interests based on the websites you visit
-- **Multi-Career Support**: Works with Software/IT, Painting & Arts, Accounts & Finance, Cooking & Culinary, Business & Startups, Medical & Healthcare, Design & Creative, and General Career exploration
-- **Career Guidance**: Get personalized advice, essential skills, and next steps for any career
-- **Learning Resources**: Discover YouTube channels, online courses, and practice ideas for your chosen career
-- **Auto Resume Builder**: Automatically builds your resume as you explore different careers
-- **Opportunities**: Browse jobs, internships, events, and freelance opportunities by career domain
+- **🤖 Floating Assistant**: Appears automatically on every webpage (bottom-right corner)
+- **🧠 Auto-Analysis**: Automatically analyzes page content (headings, text, code blocks)
+- **💬 Chat Interface**: Chat with AI about the current page content
+- **🎯 Context-Aware Suggestions**: Smart suggestions based on page type (coding, learning, articles)
+- **⚡ Real-time Responses**: Powered by Google Gemini API
+- **🎨 Leeco AI Style**: Clean, minimal floating UI design
+
+## 🚀 Installation & Setup
+
+### Step 1: Get Gemini API Key
+
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy your API key
+
+### Step 2: Configure API Key
+
+1. Open `content.js` in a text editor
+2. Find line 8: `const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE';`
+3. Replace `YOUR_GEMINI_API_KEY_HERE` with your actual API key:
+   ```javascript
+   const GEMINI_API_KEY = 'your-actual-api-key-here';
+   ```
+4. Save the file
+
+### Step 3: Load Extension in Chrome
+
+1. Open Google Chrome
+2. Navigate to `chrome://extensions/`
+3. Enable **Developer mode** (toggle in top-right)
+4. Click **"Load unpacked"**
+5. Select the folder containing the extension files
+6. The extension should now appear in your extensions list
+
+### Step 4: Start Using
+
+1. Visit any website (LeetCode, Udemy, Coursera, blogs, etc.)
+2. The floating assistant will appear automatically in the bottom-right corner
+3. Wait for auto-analysis (takes 1-2 seconds)
+4. Click on suggestions or type your own questions!
+
+## 💡 How It Works
+
+### Automatic Context Analysis
+
+When you visit a page, CareerVerse AI automatically extracts:
+- Page title and domain
+- Headings (H1, H2, H3)
+- Visible text snippets
+- Code blocks (if present)
+- Detects page type (coding, learning, article, etc.)
+
+### Context-Aware Suggestions
+
+Based on the page type, you'll see different suggestions:
+
+**On Coding Sites (LeetCode, GitHub, etc.):**
+- "Explain this problem simply"
+- "How should I approach this?"
+- "What concepts should I review?"
+
+**On Learning Sites (Udemy, Coursera, etc.):**
+- "Summarize this lesson"
+- "How should I study this?"
+- "What are the key takeaways?"
+
+**On Articles/Blogs:**
+- "Explain this simply"
+- "What are the main points?"
+- "What should I learn next?"
+
+### Chat Interface
+
+- Type any question about the current page
+- Get AI-powered responses
+- Chat history maintained during session
+- Loading animation while AI responds
+
+## 🎨 UI Features
+
+- **Floating Panel**: Bottom-right corner, doesn't interfere with browsing
+- **Minimize/Maximize**: Click `−` to minimize, `+` to expand
+- **Close**: Click `×` to hide (reopen via extension popup)
+- **Chat Bubbles**: User messages (right, purple) and AI responses (left, white)
+- **Auto-Suggestions**: Clickable suggestion buttons
+- **Smooth Animations**: Fade-in effects and loading dots
 
 ## 📁 Project Structure
 
 ```
-careerverse-ai-extension/
+career_verse/
 ├── manifest.json       # Chrome Extension Manifest V3
-├── popup.html          # Main UI structure
-├── popup.js            # Core logic, career engine, resume manager
-├── content.js          # Context detection from webpages
-├── style.css           # Modern, clean styling
+├── content.js          # Context extraction + Floating UI + Gemini API
+├── popup.html          # Simple toggle interface
+├── popup.js            # Popup logic (toggle assistant)
+├── style.css           # Floating assistant styles
 └── README.md           # This file
 ```
 
-## 🚀 Installation
+## 🔧 Technical Details
 
-### Step 1: Download the Extension
-
-1. Download or clone this repository to your computer
-2. Make sure all files are in the same folder
-
-### Step 2: Load in Chrome
-
-1. Open Google Chrome
-2. Navigate to `chrome://extensions/` (or go to Chrome menu → Extensions → Manage Extensions)
-3. Enable **Developer mode** (toggle in the top-right corner)
-4. Click **"Load unpacked"** button
-5. Select the folder containing the extension files
-6. The extension should now appear in your extensions list
-
-### Step 3: Pin the Extension (Optional)
-
-1. Click the puzzle piece icon (Extensions) in Chrome toolbar
-2. Find "CareerVerse AI" and click the pin icon to keep it visible
-
-## 💡 How to Use
-
-### 1. Career Detection
-
-- **Automatic Detection**: Visit career-related websites (e.g., LeetCode, art galleries, recipe sites) and click the extension icon. Click "🔍 Detect Career" to see what career was detected.
-- **Manual Selection**: Use the dropdown menu to manually select a career domain
-
-### 2. Get Guidance
-
-- Click the **Guidance** tab (default)
-- Either use "Detect Career" or select a career manually
-- View personalized advice, essential skills, and beginner steps
-
-### 3. Explore Learning Resources
-
-- Click the **Learn** tab
-- Select a career from the dropdown
-- Browse YouTube learning suggestions, online courses, practice ideas, and career roadmap
-
-### 4. View Your Resume
-
-- Click the **Resume** tab
-- Your resume is automatically updated as you explore careers
-- Skills and activities are tracked automatically
-- Click "Reset Resume" to start fresh
-
-### 5. Find Opportunities
-
-- Click the **Opportunities** tab
-- Select a career domain
-- Browse jobs, internships, events, and freelance opportunities
-
-## 🛠️ Technical Details
-
-### Technologies Used
+### Technologies
 
 - **Plain HTML, CSS, JavaScript** (no frameworks)
 - **Chrome Extension Manifest V3**
-- **Chrome Storage API** (for resume data)
-- **Content Scripts** (for context detection)
+- **Google Gemini Pro API** (via REST)
+- **Content Scripts** (injected into web pages)
 
-### Browser Compatibility
+### API Integration
 
-- Google Chrome (recommended)
-- Microsoft Edge (Chromium-based)
-- Other Chromium-based browsers
+- Uses Gemini Pro model via REST API
+- System prompt for context-aware responses
+- Includes page context in every request
+- Handles errors gracefully
 
-### Data Storage
+### Context Extraction
 
-- Resume data is stored locally using `chrome.storage.local`
-- No data is sent to external servers
-- All processing happens offline (except reading current webpage)
+- Extracts up to 10 headings
+- First 5 visible paragraphs (max 1000 chars)
+- Up to 5 code blocks (truncated to 300 chars each)
+- Detects domain type automatically
 
-## 📝 Career Domains Supported
+## ⚠️ Important Notes
 
-1. **Software / IT** - Programming, development, algorithms
-2. **Painting & Arts** - Visual arts, drawing, painting
-3. **Accounts & Finance** - Accounting, bookkeeping, finance
-4. **Cooking & Culinary** - Cooking, baking, culinary arts
-5. **Business & Startups** - Entrepreneurship, business development
-6. **Medical & Healthcare** - Healthcare careers, medicine
-7. **Design & Creative** - UI/UX design, graphic design
-8. **General Career** - General career exploration and guidance
+### API Key Security
 
-## 🎨 UI Features
+- **This is a PROTOTYPE** - API key is hard-coded in `content.js`
+- For production, use secure storage or backend proxy
+- Never commit API keys to public repositories
+- All users share the same API key in this prototype
 
-- Modern, clean design with gradient header
-- Tabbed interface for easy navigation
-- Responsive layout
-- Smooth animations and transitions
-- Friendly, approachable tone (not corporate)
+### Limitations
 
-## 🔧 Customization
+- Works on regular web pages (not chrome:// or extension pages)
+- Some sites may block content script injection
+- API rate limits apply (depends on your Gemini API quota)
+- Context extraction limited to visible content
 
-All career data, advice, and opportunities are stored in static JavaScript objects in `popup.js`. You can easily:
+### Ethical Guidelines
 
-- Modify career information in the `careerData` object
-- Update opportunities in the `opportunitiesData` object
-- Adjust keyword detection in `content.js`
-- Customize styling in `style.css`
-
-## ⚠️ Notes
-
-- This is a **prototype/MVP** version
-- All data is static (no external APIs)
-- Opportunities are example/dummy data
-- Context detection is keyword-based (may not be 100% accurate)
-- Works best on content-rich websites
+The AI assistant follows these rules:
+- ✅ Provides hints, not full solutions for coding problems
+- ✅ Summarizes learning content, doesn't copy it
+- ✅ No medical diagnosis
+- ✅ No copyrighted content reproduction
+- ✅ Educational guidance only
 
 ## 🐛 Troubleshooting
 
-**Extension not loading?**
-- Make sure Developer mode is enabled
-- Check that all files are in the same folder
-- Verify manifest.json is valid JSON
+**Assistant not appearing?**
+- Make sure you're on a regular website (not chrome://)
+- Check browser console for errors (F12)
+- Verify API key is set correctly in `content.js`
+- Try reloading the page
 
-**Context detection not working?**
-- Some pages (chrome://, extensions://) cannot be analyzed
-- Try visiting regular websites with career-related content
-- Use manual career selection as an alternative
+**API errors?**
+- Verify your Gemini API key is correct
+- Check your API quota/limits
+- Ensure internet connection is active
+- Check browser console for detailed error messages
 
-**Resume not saving?**
-- Make sure you've interacted with at least one career
-- Check Chrome's storage permissions
-- Try resetting the resume if needed
+**Suggestions not showing?**
+- Wait 1-2 seconds after page load
+- Some pages may not have extractable content
+- Try refreshing the page
+
+**Chat not working?**
+- Verify API key is configured
+- Check browser console for errors
+- Ensure you have internet connection
+- Try reloading the extension
+
+## 🔄 Updating the Extension
+
+After making changes to the code:
+
+1. Go to `chrome://extensions/`
+2. Find "CareerVerse AI"
+3. Click the refresh icon (🔄)
+4. Reload the webpage you're testing on
+
+## 📝 Customization
+
+### Change API Key Location
+
+To use a different API key storage method, modify `content.js`:
+- Line 8: Update `GEMINI_API_KEY` constant
+- Or implement `chrome.storage` for user-provided keys
+
+### Modify Suggestions
+
+Edit `generateSuggestions()` function in `content.js` (around line 200) to customize suggestion text.
+
+### Change UI Style
+
+Modify `style.css` - all floating assistant styles are prefixed with `cv-` or `#careerverse-assistant`.
+
+### Adjust Context Extraction
+
+Modify `extractPageContext()` function in `content.js` to change what content is extracted.
+
+## 🎯 Use Cases
+
+### Learning Platforms
+- **Udemy/Coursera**: Get lesson summaries, study tips, key concepts
+- **YouTube**: Understand video content, get learning paths
+- **Khan Academy**: Clarify concepts, get practice suggestions
+
+### Coding Platforms
+- **LeetCode**: Get problem-solving hints (not solutions!)
+- **GitHub**: Understand code, get explanations
+- **Stack Overflow**: Clarify answers, learn concepts
+
+### Articles & Blogs
+- **Medium**: Summarize articles, extract key points
+- **Technical Blogs**: Explain complex topics simply
+- **Documentation**: Get quick explanations
 
 ## 📄 License
 
@@ -156,9 +229,8 @@ This is a prototype project. Feel free to use and modify as needed.
 
 ## 🙏 Credits
 
-Built as a universal career assistant prototype. Designed to help users across all career domains, not just technology.
+Built as an intelligent learning assistant inspired by Leeco AI. Designed to help users learn and understand web content better.
 
 ---
 
-**Happy Career Exploring! 🎯✨**
-
+**Happy Learning! 🎓✨**

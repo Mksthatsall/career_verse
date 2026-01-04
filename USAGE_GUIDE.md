@@ -207,3 +207,4 @@
 
 **Ready to explore? Start by visiting any career-related website and clicking the extension icon! 🎯**
 
+

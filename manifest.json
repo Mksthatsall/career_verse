@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CareerVerse AI",
-  "version": "1.0.0",
-  "description": "Universal Career Assistant - Get guidance, learning paths, and build your resume across all career domains",
+  "version": "2.0.0",
+  "description": "Intelligent learning assistant with floating chat interface - Auto-analyzes web pages and provides context-aware guidance",
   "permissions": [
     "storage",
     "activeTab",
@@ -10,7 +10,8 @@
     "scripting"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "<all_urls>",
+    "https://generativelanguage.googleapis.com/*"
   ],
   "action": {
     "default_popup": "popup.html"
@@ -19,8 +20,8 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ]
 }
-

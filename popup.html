@@ -3,108 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CareerVerse AI</title>
+  <title>🤖 CareerVerse AI</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <!-- Header -->
     <header class="header">
-      <h1>🎯 CareerVerse AI</h1>
-      <p class="subtitle">Your Universal Career Assistant</p>
+      <h1 class="header-title">
+        <span class="emoji-large">🤖</span>
+        <span>CareerVerse AI</span>
+      </h1>
+      <p class="subtitle">✨ Your Intelligent Learning Assistant</p>
     </header>
 
-    <!-- Tab Navigation -->
-    <nav class="tabs">
-      <button class="tab-btn active" data-tab="guidance">
-        <span>💡</span> Guidance
-      </button>
-      <button class="tab-btn" data-tab="learn">
-        <span>📚</span> Learn
-      </button>
-      <button class="tab-btn" data-tab="resume">
-        <span>📄</span> Resume
-      </button>
-      <button class="tab-btn" data-tab="opportunities">
-        <span>🌟</span> Opportunities
-      </button>
-    </nav>
-
-    <!-- Tab Contents -->
-    <div class="tab-content">
-      <!-- Guidance Tab -->
-      <div id="guidance" class="tab-pane active">
-        <div class="section">
-          <h2>Career Detection</h2>
-          <div id="context-info" class="context-box">
-            <p>Analyzing current page...</p>
-          </div>
-          <button id="detect-btn" class="primary-btn">🔍 Detect Career</button>
-          <button id="refresh-context-btn" class="secondary-btn">🔄 Refresh Context</button>
+    <!-- Main Content -->
+    <div class="tab-content" style="padding: 20px;">
+      <div class="section">
+        <p style="margin-bottom: 20px; color: #666; line-height: 1.6;">
+          <span class="emoji-inline">🚀</span> CareerVerse AI is now active! The floating assistant will appear on web pages automatically.
+        </p>
+        
+        <button id="toggle-assistant-btn" class="primary-btn">
+          <span class="emoji-inline">🎯</span> Toggle Assistant
+        </button>
+        
+        <div class="info-box" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 13px; color: #555;">
+          <p style="margin-bottom: 10px;">
+            <strong>
+              <span class="emoji-inline">💡</span> How it works:
+            </strong>
+          </p>
+          <ul style="margin-left: 20px; line-height: 1.8;">
+            <li><span class="emoji-inline">🔍</span> Automatically analyzes web pages</li>
+            <li><span class="emoji-inline">💬</span> Provides context-aware suggestions</li>
+            <li><span class="emoji-inline">🤖</span> Chat with AI about page content</li>
+            <li><span class="emoji-inline">🎓</span> Adapts to coding, learning, and article sites</li>
+          </ul>
         </div>
 
-        <div class="section">
-          <h3>Or Select Manually</h3>
-          <select id="manual-career-select" class="career-select">
-            <option value="">-- Choose a career --</option>
-            <option value="software">Software / IT</option>
-            <option value="painting">Painting & Arts</option>
-            <option value="accounts">Accounts & Finance</option>
-            <option value="cooking">Cooking & Culinary</option>
-            <option value="business">Business & Startups</option>
-            <option value="medical">Medical & Healthcare</option>
-            <option value="design">Design & Creative</option>
-            <option value="general">General Career</option>
-          </select>
-        </div>
-
-        <div id="guidance-result" class="guidance-result"></div>
-      </div>
-
-      <!-- Learn Tab -->
-      <div id="learn" class="tab-pane">
-        <div class="section">
-          <h2>Learning Path</h2>
-          <select id="learn-career-select" class="career-select">
-            <option value="">-- Select career to learn about --</option>
-            <option value="software">Software / IT</option>
-            <option value="painting">Painting & Arts</option>
-            <option value="accounts">Accounts & Finance</option>
-            <option value="cooking">Cooking & Culinary</option>
-            <option value="business">Business & Startups</option>
-            <option value="medical">Medical & Healthcare</option>
-            <option value="design">Design & Creative</option>
-            <option value="general">General Career</option>
-          </select>
-          <div id="learn-content" class="learn-content"></div>
-        </div>
-      </div>
-
-      <!-- Resume Tab -->
-      <div id="resume" class="tab-pane">
-        <div class="section">
-          <h2>Your Resume</h2>
-          <button id="reset-resume-btn" class="secondary-btn">🔄 Reset Resume</button>
-          <div id="resume-content" class="resume-content"></div>
-        </div>
-      </div>
-
-      <!-- Opportunities Tab -->
-      <div id="opportunities" class="tab-pane">
-        <div class="section">
-          <h2>Career Opportunities</h2>
-          <select id="opportunities-career-select" class="career-select">
-            <option value="">-- Select career domain --</option>
-            <option value="software">Software / IT</option>
-            <option value="painting">Painting & Arts</option>
-            <option value="accounts">Accounts & Finance</option>
-            <option value="cooking">Cooking & Culinary</option>
-            <option value="business">Business & Startups</option>
-            <option value="medical">Medical & Healthcare</option>
-            <option value="design">Design & Creative</option>
-            <option value="general">General Career</option>
-          </select>
-          <div id="opportunities-content" class="opportunities-content"></div>
+        <div class="warning-box" style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; font-size: 12px; color: #856404; border-left: 3px solid #ffc107;">
+          <p>
+            <strong>
+              <span class="emoji-inline">⚠️</span> Setup Required:
+            </strong>
+          </p>
+          <p style="margin-top: 8px;">
+            <span class="emoji-inline">🔑</span> Add your Gemini API key in <code>content.js</code> (line 8). Replace <code>YOUR_GEMINI_API_KEY_HERE</code> with your actual API key.
+          </p>
         </div>
       </div>
     </div>
@@ -113,4 +59,3 @@
   <script src="popup.js"></script>
 </body>
 </html>
-
