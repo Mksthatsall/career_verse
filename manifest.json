@@ -1,33 +1,32 @@
 {
   "manifest_version": 3,
   "name": "CareerVerse AI",
-  "version": "2.0.0",
-  "description": "Intelligent learning assistant with floating chat interface - Auto-analyzes web pages and provides context-aware guidance",
-  "permissions": [
-    "storage",
-    "activeTab",
-    "tabs",
-    "scripting"
-  ],
-  "optional_permissions": [
-    "desktopCapture"
-  ],
+  "version": "1.0.0",
+  "description": "Universal Career Assistant - Get guidance, learning paths, and build your resume across all career domains",
+  "permissions": ["storage", "activeTab", "tabs", "scripting"],
   "host_permissions": [
     "<all_urls>",
-    "https://generativelanguage.googleapis.com/*"
+    "https://*.firebaseio.com/*",
+    "https://*.firebasedatabase.app/*",
+    "https://*.firebaseapp.com/*",
+    "https://www.googleapis.com/*",
+    "https://www.gstatic.com/*"
   ],
-  "action": {
-    "default_popup": "popup.html"
-  },
   "background": {
     "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_idle",
-      "all_frames": false
+      "run_at": "document_idle"
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
 }
+
