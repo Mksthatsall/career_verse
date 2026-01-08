@@ -122,6 +122,177 @@
   }
 
   // ============================================
+  // ACTIVITY TRACKING
+  // ============================================
+
+  /**
+   * Detect career domain from page context
+   */
+  function detectCareerDomain(context) {
+    const domain = context.domain.toLowerCase();
+    const url = context.url.toLowerCase();
+    const title = context.title.toLowerCase();
+
+    // Software/IT detection
+    if (domain.includes('leetcode') || domain.includes('hackerrank') || 
+        domain.includes('codewars') || domain.includes('github') || 
+        domain.includes('stackoverflow') || domain.includes('freecodecamp') ||
+        url.includes('javascript') || url.includes('python') || 
+        url.includes('react') || url.includes('node')) {
+      return 'software';
+    }
+
+    // Design detection
+    if (domain.includes('figma') || domain.includes('dribbble') || 
+        domain.includes('behance') || url.includes('design') || 
+        title.includes('ui') || title.includes('ux')) {
+      return 'design';
+    }
+
+    // Accounts/Finance detection
+    if (domain.includes('accounting') || domain.includes('finance') || 
+        url.includes('excel') || url.includes('tally') || 
+        title.includes('accounting') || title.includes('finance')) {
+      return 'accounts';
+    }
+
+    // Business detection
+    if (domain.includes('business') || domain.includes('startup') || 
+        url.includes('marketing') || url.includes('sales') || 
+        title.includes('business') || title.includes('startup')) {
+      return 'business';
+    }
+
+    // Cooking detection
+    if (domain.includes('cooking') || domain.includes('recipe') || 
+        url.includes('cooking') || url.includes('culinary') || 
+        title.includes('cooking') || title.includes('recipe')) {
+      return 'cooking';
+    }
+
+    // Painting/Arts detection
+    if (domain.includes('art') || domain.includes('painting') || 
+        url.includes('art') || url.includes('painting') || 
+        title.includes('art') || title.includes('painting')) {
+      return 'painting';
+    }
+
+    // Medical detection
+    if (domain.includes('medical') || domain.includes('health') || 
+        url.includes('medical') || url.includes('healthcare') || 
+        title.includes('medical') || title.includes('health')) {
+      return 'medical';
+    }
+
+    return 'general';
+  }
+
+  /**
+   * Infer activity type from page context
+   */
+  function inferActivityType(context) {
+    const domain = context.domain.toLowerCase();
+    const url = context.url.toLowerCase();
+    const title = context.title.toLowerCase();
+
+    if (domain.includes('leetcode') || domain.includes('hackerrank') || domain.includes('codewars')) {
+      return 'Solved coding problem';
+    }
+    if (domain.includes('github')) {
+      return 'Viewed code repository';
+    }
+    if (domain.includes('udemy') || domain.includes('coursera') || domain.includes('edx')) {
+      return 'Completed course lesson';
+    }
+    if (domain.includes('youtube.com')) {
+      return 'Watched tutorial video';
+    }
+    if (domain.includes('medium') || domain.includes('blog')) {
+      return 'Read article';
+    }
+    if (context.codeBlocks.length > 0) {
+      return 'Reviewed code';
+    }
+    if (context.detectedDomain === 'learning') {
+      return 'Learning activity';
+    }
+    
+    return 'Page visit';
+  }
+
+  /**
+   * Log activity to Firebase via background script
+   */
+  async function logActivity(context) {
+    try {
+      const careerDomain = detectCareerDomain(context);
+      const activityType = inferActivityType(context);
+
+      // Only log if it's a learning-related domain
+      if (careerDomain !== 'general' || context.detectedDomain !== 'general') {
+        await chrome.runtime.sendMessage({
+          action: 'logActivity',
+          activity: {
+            domain: careerDomain,
+            activityType: activityType,
+            url: context.url,
+            timestamp: Date.now()
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
+  }
+
+  // Track page visits with debouncing (log once per page)
+  let lastLoggedUrl = null;
+  let activityLogged = false;
+
+  /**
+   * Track page activity when page loads or changes
+   */
+  function trackPageActivity() {
+    const currentUrl = window.location.href;
+    
+    // Only log if URL changed or it's a learning platform
+    if (currentUrl !== lastLoggedUrl || !activityLogged) {
+      const context = extractPageContext();
+      
+      // Log activity if it's a learning platform
+      if (context.detectedDomain !== 'general' || 
+          context.domain.includes('leetcode') || 
+          context.domain.includes('coursera') ||
+          context.domain.includes('udemy') ||
+          context.domain.includes('github')) {
+        logActivity(context);
+        lastLoggedUrl = currentUrl;
+        activityLogged = true;
+      }
+    }
+  }
+
+  // Track activity on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(trackPageActivity, 2000); // Wait 2 seconds for page to fully load
+    });
+  } else {
+    setTimeout(trackPageActivity, 2000);
+  }
+
+  // Track activity when URL changes (SPA navigation)
+  let lastUrl = location.href;
+  new MutationObserver(() => {
+    const url = location.href;
+    if (url !== lastUrl) {
+      lastUrl = url;
+      activityLogged = false;
+      setTimeout(trackPageActivity, 2000);
+    }
+  }).observe(document, { subtree: true, childList: true });
+
+  // ============================================
   // FLOATING ASSISTANT UI
   // ============================================
 
