@@ -1,3 +1,4 @@
+
 // Content script for CareerVerse AI
 // Context extraction + Floating Assistant UI
 
@@ -24,16 +25,25 @@
   //       - Checking API quota/limits
   //       - Verifying the key has proper permissions
   //
-  const GEMINI_API_KEY = 'AIzaSyACrev6cQPk_SguooBm7eV7yLCQQOtTLAo';
-  // Try different API versions and models if one doesn't work:
-  // Option 1: v1beta with gemini-1.0-pro (stable)
-  const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent';
-  
-  // Option 2: If above doesn't work, try v1 API:
-  // const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent';
-  
-  // Option 3: Try with versioned model names:
-  // const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent';
+  // HARD-CODED API KEY (paste your key here)
+  // Example key formats from Google typically start with "AIza". Replace the value below with your key.
+  const GEMINI_API_KEY = 'AIzaSyAHr0tEafpI0G5YsbMqIS4EgoTl9yzKYlY';
+
+  // Model selection: choose either 'gemini-2.5-flash' or 'gemini-1.0-pro'
+  // Set to 'gemini-2.5-flash' by default (flash model). Change to 'gemini-1.0-pro' for the pro model.
+  const GEMINI_MODEL = 'gemini-2.5-flash';
+
+  // API version to use. Some models require 'v1' while others may be available under 'v1beta'.
+  // If you get 404/400 errors, try switching this to 'v1beta'.
+  const GEMINI_API_VERSION = 'v1';
+
+  // Construct the API URL from the selected version and model
+  const GEMINI_API_URL = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_MODEL}:generateContent`;
+
+  // Examples (if you need to try alternatives):
+  // const GEMINI_MODEL = 'gemini-1.0-pro';
+  // const GEMINI_API_VERSION = 'v1beta';
+  // const GEMINI_API_URL = `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${GEMINI_MODEL}:generateContent`;
 
   // ============================================
   // CONTEXT EXTRACTION ENGINE
@@ -112,12 +122,184 @@
   }
 
   // ============================================
+  // ACTIVITY TRACKING
+  // ============================================
+
+  /**
+   * Detect career domain from page context
+   */
+  function detectCareerDomain(context) {
+    const domain = context.domain.toLowerCase();
+    const url = context.url.toLowerCase();
+    const title = context.title.toLowerCase();
+
+    // Software/IT detection
+    if (domain.includes('leetcode') || domain.includes('hackerrank') || 
+        domain.includes('codewars') || domain.includes('github') || 
+        domain.includes('stackoverflow') || domain.includes('freecodecamp') ||
+        url.includes('javascript') || url.includes('python') || 
+        url.includes('react') || url.includes('node')) {
+      return 'software';
+    }
+
+    // Design detection
+    if (domain.includes('figma') || domain.includes('dribbble') || 
+        domain.includes('behance') || url.includes('design') || 
+        title.includes('ui') || title.includes('ux')) {
+      return 'design';
+    }
+
+    // Accounts/Finance detection
+    if (domain.includes('accounting') || domain.includes('finance') || 
+        url.includes('excel') || url.includes('tally') || 
+        title.includes('accounting') || title.includes('finance')) {
+      return 'accounts';
+    }
+
+    // Business detection
+    if (domain.includes('business') || domain.includes('startup') || 
+        url.includes('marketing') || url.includes('sales') || 
+        title.includes('business') || title.includes('startup')) {
+      return 'business';
+    }
+
+    // Cooking detection
+    if (domain.includes('cooking') || domain.includes('recipe') || 
+        url.includes('cooking') || url.includes('culinary') || 
+        title.includes('cooking') || title.includes('recipe')) {
+      return 'cooking';
+    }
+
+    // Painting/Arts detection
+    if (domain.includes('art') || domain.includes('painting') || 
+        url.includes('art') || url.includes('painting') || 
+        title.includes('art') || title.includes('painting')) {
+      return 'painting';
+    }
+
+    // Medical detection
+    if (domain.includes('medical') || domain.includes('health') || 
+        url.includes('medical') || url.includes('healthcare') || 
+        title.includes('medical') || title.includes('health')) {
+      return 'medical';
+    }
+
+    return 'general';
+  }
+
+  /**
+   * Infer activity type from page context
+   */
+  function inferActivityType(context) {
+    const domain = context.domain.toLowerCase();
+    const url = context.url.toLowerCase();
+    const title = context.title.toLowerCase();
+
+    if (domain.includes('leetcode') || domain.includes('hackerrank') || domain.includes('codewars')) {
+      return 'Solved coding problem';
+    }
+    if (domain.includes('github')) {
+      return 'Viewed code repository';
+    }
+    if (domain.includes('udemy') || domain.includes('coursera') || domain.includes('edx')) {
+      return 'Completed course lesson';
+    }
+    if (domain.includes('youtube.com')) {
+      return 'Watched tutorial video';
+    }
+    if (domain.includes('medium') || domain.includes('blog')) {
+      return 'Read article';
+    }
+    if (context.codeBlocks.length > 0) {
+      return 'Reviewed code';
+    }
+    if (context.detectedDomain === 'learning') {
+      return 'Learning activity';
+    }
+    
+    return 'Page visit';
+  }
+
+  /**
+   * Log activity to Firebase via background script
+   */
+  async function logActivity(context) {
+    try {
+      const careerDomain = detectCareerDomain(context);
+      const activityType = inferActivityType(context);
+
+      // Only log if it's a learning-related domain
+      if (careerDomain !== 'general' || context.detectedDomain !== 'general') {
+        await chrome.runtime.sendMessage({
+          action: 'logActivity',
+          activity: {
+            domain: careerDomain,
+            activityType: activityType,
+            url: context.url,
+            timestamp: Date.now()
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error logging activity:', error);
+    }
+  }
+
+  // Track page visits with debouncing (log once per page)
+  let lastLoggedUrl = null;
+  let activityLogged = false;
+
+  /**
+   * Track page activity when page loads or changes
+   */
+  function trackPageActivity() {
+    const currentUrl = window.location.href;
+    
+    // Only log if URL changed or it's a learning platform
+    if (currentUrl !== lastLoggedUrl || !activityLogged) {
+      const context = extractPageContext();
+      
+      // Log activity if it's a learning platform
+      if (context.detectedDomain !== 'general' || 
+          context.domain.includes('leetcode') || 
+          context.domain.includes('coursera') ||
+          context.domain.includes('udemy') ||
+          context.domain.includes('github')) {
+        logActivity(context);
+        lastLoggedUrl = currentUrl;
+        activityLogged = true;
+      }
+    }
+  }
+
+  // Track activity on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(trackPageActivity, 2000); // Wait 2 seconds for page to fully load
+    });
+  } else {
+    setTimeout(trackPageActivity, 2000);
+  }
+
+  // Track activity when URL changes (SPA navigation)
+  let lastUrl = location.href;
+  new MutationObserver(() => {
+    const url = location.href;
+    if (url !== lastUrl) {
+      lastUrl = url;
+      activityLogged = false;
+      setTimeout(trackPageActivity, 2000);
+    }
+  }).observe(document, { subtree: true, childList: true });
+
+  // ============================================
   // FLOATING ASSISTANT UI
   // ============================================
 
   let chatHistory = [];
   let isMinimized = false;
   let isInitialized = false;
+  let currentView = 'chat'; // 'chat', 'resume', 'progress', 'jobs'
 
   /**
    * Inject CSS styles for floating assistant
@@ -135,13 +317,14 @@
         position: fixed;
         bottom: 20px;
         right: 20px;
-        width: 380px;
-        max-height: 600px;
+        width: min(700px, calc(100vw - 40px));
+        max-width: 90vw;
+        max-height: min(700px, calc(100vh - 40px));
         background: white;
         border-radius: 16px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         display: flex;
-        flex-direction: column;
+        flex-direction: row-reverse;
         z-index: 999999;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         overflow: hidden;
@@ -149,10 +332,68 @@
       }
       #careerverse-assistant.cv-minimized {
         max-height: 60px;
+        width: 380px;
       }
+      #careerverse-assistant.cv-minimized .cv-sidebar,
       #careerverse-assistant.cv-minimized .cv-assistant-body,
       #careerverse-assistant.cv-minimized .cv-assistant-footer {
         display: none;
+      }
+      .cv-sidebar {
+        width: 180px;
+        min-width: 140px;
+        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        padding: 16px 0;
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        flex-shrink: 0;
+      }
+      .cv-sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 0 8px;
+      }
+      .cv-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        color: rgba(255, 255, 255, 0.9);
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .cv-nav-item:hover {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+      }
+      .cv-nav-item.active {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+        font-weight: 600;
+      }
+      .cv-nav-item-icon {
+        font-size: 18px;
+        width: 24px;
+        text-align: center;
+      }
+      .cv-main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .cv-view {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+      }
+      .cv-view.active {
+        display: flex;
       }
       .cv-assistant-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -199,9 +440,175 @@
       .cv-assistant-body {
         flex: 1;
         overflow-y: auto;
-        max-height: 450px;
         padding: 16px;
         background: #f8f9fa;
+        min-width: 0;
+      }
+      .cv-resume-section, .cv-progress-section, .cv-jobs-section {
+        background: white;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+      }
+      .cv-resume-section h3, .cv-progress-section h3, .cv-jobs-section h3 {
+        margin: 0 0 12px 0;
+        color: #667eea;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .cv-form-group {
+        margin-bottom: 16px;
+      }
+      .cv-form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #555;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .cv-form-group input, .cv-form-group textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+      }
+      .cv-form-group input:focus, .cv-form-group textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+      .cv-form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+      .cv-btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .cv-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+      .cv-btn-secondary {
+        background: #f0f0f0;
+        color: #333;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        margin-left: 8px;
+      }
+      .cv-btn-secondary:hover {
+        background: #e0e0e0;
+      }
+      .cv-item-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .cv-item-card {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 3px solid #667eea;
+      }
+      .cv-item-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .cv-item-card-title {
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+      }
+      .cv-item-card-date {
+        font-size: 12px;
+        color: #999;
+      }
+      .cv-progress-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .cv-stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 16px;
+        border-radius: 12px;
+        text-align: center;
+      }
+      .cv-stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .cv-stat-label {
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      .cv-job-card {
+        background: #f8f9fa;
+        padding: 14px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        border-left: 4px solid #667eea;
+      }
+      .cv-job-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 8px;
+      }
+      .cv-job-title {
+        font-weight: 600;
+        color: #333;
+        font-size: 15px;
+        margin-bottom: 4px;
+      }
+      .cv-job-company {
+        font-size: 13px;
+        color: #667eea;
+      }
+      .cv-job-status {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .cv-job-status.applied {
+        background: #e3f2fd;
+        color: #1976d2;
+      }
+      .cv-job-status.interview {
+        background: #fff3e0;
+        color: #f57c00;
+      }
+      .cv-job-status.offer {
+        background: #e8f5e9;
+        color: #388e3c;
+      }
+      .cv-job-status.rejected {
+        background: #ffebee;
+        color: #d32f2f;
+      }
+      .cv-job-details {
+        font-size: 12px;
+        color: #666;
+        margin-top: 8px;
       }
       .cv-welcome-message {
         background: white;
@@ -390,12 +797,97 @@
       .cv-assistant-body::-webkit-scrollbar-thumb:hover {
         background: #555;
       }
-      @media (max-width: 480px) {
+      @media (max-width: 1024px) {
+        #careerverse-assistant {
+          width: min(600px, calc(100vw - 40px));
+          max-height: min(650px, calc(100vh - 40px));
+        }
+        .cv-sidebar {
+          width: 160px;
+          min-width: 120px;
+        }
+      }
+      @media (max-width: 768px) {
         #careerverse-assistant {
           width: calc(100vw - 40px);
           right: 20px;
           left: 20px;
-          max-width: 380px;
+          max-width: calc(100vw - 40px);
+          max-height: calc(100vh - 40px);
+        }
+        .cv-sidebar {
+          width: 140px;
+          min-width: 100px;
+        }
+        .cv-nav-item {
+          padding: 10px 12px;
+          font-size: 13px;
+        }
+        .cv-nav-item span:not(.cv-nav-item-icon) {
+          display: none;
+        }
+      }
+      @media (max-width: 640px) {
+        #careerverse-assistant {
+          width: calc(100vw - 20px);
+          right: 10px;
+          left: 10px;
+          max-width: calc(100vw - 20px);
+          max-height: calc(100vh - 20px);
+        }
+        .cv-sidebar {
+          width: 120px;
+          min-width: 80px;
+        }
+        .cv-main-content {
+          font-size: 14px;
+        }
+      }
+      @media (max-width: 480px) {
+        #careerverse-assistant {
+          flex-direction: column;
+          width: calc(100vw - 20px);
+          max-width: calc(100vw - 20px);
+          max-height: calc(100vh - 20px);
+          bottom: 10px;
+          right: 10px;
+          left: 10px;
+        }
+        .cv-sidebar {
+          width: 100%;
+          min-width: 100%;
+          flex-direction: row;
+          padding: 8px;
+        }
+        .cv-sidebar-nav {
+          flex-direction: row;
+          width: 100%;
+          gap: 4px;
+        }
+        .cv-nav-item {
+          flex: 1;
+          justify-content: center;
+          padding: 8px;
+          font-size: 12px;
+        }
+        .cv-nav-item span:not(.cv-nav-item-icon) {
+          display: none;
+        }
+        .cv-assistant-header {
+          padding: 12px 16px;
+        }
+        .cv-assistant-title {
+          font-size: 14px;
+        }
+        .cv-assistant-body {
+          padding: 12px;
+        }
+        .cv-form-group {
+          margin-bottom: 12px;
+        }
+        .cv-form-group input, .cv-form-group textarea {
+          padding: 8px 10px;
+          font-size: 13px;
         }
       }
     `;
@@ -417,32 +909,159 @@
     const assistant = document.createElement('div');
     assistant.id = 'careerverse-assistant';
     assistant.innerHTML = `
-      <div class="cv-assistant-header">
-        <div class="cv-assistant-title">
-          <span class="cv-icon">🤖</span>
-          <span>CareerVerse AI</span>
+      <div class="cv-main-content">
+        <div class="cv-assistant-header">
+          <div class="cv-assistant-title">
+            <span class="cv-icon">🤖</span>
+            <span>CareerVerse AI</span>
+          </div>
+          <div class="cv-assistant-controls">
+            <button class="cv-btn-minimize" id="cv-minimize-btn" title="Minimize">−</button>
+            <button class="cv-btn-close" id="cv-close-btn" title="Close">×</button>
+          </div>
         </div>
-        <div class="cv-assistant-controls">
-          <button class="cv-btn-minimize" id="cv-minimize-btn" title="Minimize">−</button>
-          <button class="cv-btn-close" id="cv-close-btn" title="Close">×</button>
+        
+        <!-- Chat View -->
+        <div class="cv-view active" id="cv-chat-view">
+          <div class="cv-assistant-body" id="cv-chat-body">
+            <div class="cv-welcome-message">
+              <p>👋 I'm analyzing this page...</p>
+            </div>
+            <div class="cv-suggestions" id="cv-suggestions"></div>
+            <div class="cv-messages" id="cv-messages"></div>
+            <div class="cv-loading" id="cv-loading" style="display: none;">
+              <div class="cv-loading-dots">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          </div>
+          <div class="cv-assistant-footer">
+            <div class="cv-input-container">
+              <input type="text" id="cv-chat-input" placeholder="💬 Ask me anything about this page..." />
+              <button id="cv-send-btn" class="cv-send-btn" title="Send message">📤</button>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="cv-assistant-body" id="cv-chat-body">
-        <div class="cv-welcome-message">
-          <p>👋 I'm analyzing this page...</p>
+        
+        <!-- Resume View -->
+        <div class="cv-view" id="cv-resume-view">
+          <div class="cv-assistant-body">
+            <div class="cv-resume-section">
+              <h3>📄 Resume Builder</h3>
+              <div class="cv-form-group">
+                <label>Full Name</label>
+                <input type="text" id="cv-resume-name" placeholder="Enter your full name">
+              </div>
+              <div class="cv-form-group">
+                <label>Email</label>
+                <input type="email" id="cv-resume-email" placeholder="your.email@example.com">
+              </div>
+              <div class="cv-form-group">
+                <label>Phone</label>
+                <input type="tel" id="cv-resume-phone" placeholder="+1 (555) 123-4567">
+              </div>
+              <div class="cv-form-group">
+                <label>Professional Summary</label>
+                <textarea id="cv-resume-summary" placeholder="Brief summary of your professional background..."></textarea>
+              </div>
+              <div class="cv-form-group">
+                <label>Skills (comma-separated)</label>
+                <input type="text" id="cv-resume-skills" placeholder="JavaScript, Python, React, etc.">
+              </div>
+              <div class="cv-form-group">
+                <label>Experience</label>
+                <textarea id="cv-resume-experience" placeholder="Job Title, Company, Duration&#10;Description of responsibilities..."></textarea>
+              </div>
+              <div class="cv-form-group">
+                <label>Education</label>
+                <textarea id="cv-resume-education" placeholder="Degree, University, Year&#10;Relevant coursework or achievements..."></textarea>
+              </div>
+              <button class="cv-btn-primary" id="cv-save-resume-btn">💾 Save Resume</button>
+              <button class="cv-btn-secondary" id="cv-download-resume-btn">📥 Download PDF</button>
+            </div>
+          </div>
         </div>
-        <div class="cv-suggestions" id="cv-suggestions"></div>
-        <div class="cv-messages" id="cv-messages"></div>
-        <div class="cv-loading" id="cv-loading" style="display: none;">
-          <div class="cv-loading-dots">
-            <span></span><span></span><span></span>
+        
+        <!-- Progress View -->
+        <div class="cv-view" id="cv-progress-view">
+          <div class="cv-assistant-body">
+            <div class="cv-progress-section">
+              <h3>📊 My Progress</h3>
+              <div class="cv-progress-stats">
+                <div class="cv-stat-card">
+                  <div class="cv-stat-value" id="cv-stat-jobs-applied">0</div>
+                  <div class="cv-stat-label">Jobs Applied</div>
+                </div>
+                <div class="cv-stat-card">
+                  <div class="cv-stat-value" id="cv-stat-interviews">0</div>
+                  <div class="cv-stat-label">Interviews</div>
+                </div>
+                <div class="cv-stat-card">
+                  <div class="cv-stat-value" id="cv-stat-skills-learned">0</div>
+                  <div class="cv-stat-label">Skills Learned</div>
+                </div>
+                <div class="cv-stat-card">
+                  <div class="cv-stat-value" id="cv-stat-days-active">0</div>
+                  <div class="cv-stat-label">Days Active</div>
+                </div>
+              </div>
+              <h4 style="margin: 16px 0 8px 0; font-size: 14px; color: #555;">Recent Activity</h4>
+              <div class="cv-item-list" id="cv-progress-activity"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Jobs View -->
+        <div class="cv-view" id="cv-jobs-view">
+          <div class="cv-assistant-body">
+            <div class="cv-jobs-section">
+              <h3>💼 Job Applications</h3>
+              <div class="cv-form-group">
+                <label>Job Title</label>
+                <input type="text" id="cv-job-title" placeholder="e.g., Software Engineer">
+              </div>
+              <div class="cv-form-group">
+                <label>Company</label>
+                <input type="text" id="cv-job-company" placeholder="Company name">
+              </div>
+              <div class="cv-form-group">
+                <label>Status</label>
+                <select id="cv-job-status" style="width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+                  <option value="applied">Applied</option>
+                  <option value="interview">Interview</option>
+                  <option value="offer">Offer</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div class="cv-form-group">
+                <label>Notes</label>
+                <textarea id="cv-job-notes" placeholder="Additional notes about this application..."></textarea>
+              </div>
+              <button class="cv-btn-primary" id="cv-add-job-btn">➕ Add Job Application</button>
+              <h4 style="margin: 20px 0 12px 0; font-size: 14px; color: #555;">Your Applications</h4>
+              <div class="cv-item-list" id="cv-jobs-list"></div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="cv-assistant-footer">
-        <div class="cv-input-container">
-          <input type="text" id="cv-chat-input" placeholder="💬 Ask me anything about this page..." />
-          <button id="cv-send-btn" class="cv-send-btn" title="Send message">📤</button>
+      <div class="cv-sidebar">
+        <div class="cv-sidebar-nav">
+          <div class="cv-nav-item active" data-view="chat">
+            <span class="cv-nav-item-icon">💬</span>
+            <span>Chat</span>
+          </div>
+          <div class="cv-nav-item" data-view="resume">
+            <span class="cv-nav-item-icon">📄</span>
+            <span>Resume</span>
+          </div>
+          <div class="cv-nav-item" data-view="progress">
+            <span class="cv-nav-item-icon">📊</span>
+            <span>Progress</span>
+          </div>
+          <div class="cv-nav-item" data-view="jobs">
+            <span class="cv-nav-item-icon">💼</span>
+            <span>Job Updates</span>
+          </div>
         </div>
       </div>
     `;
@@ -475,6 +1094,26 @@
         handleSendMessage();
       }
     });
+
+    // Navigation
+    document.querySelectorAll('.cv-nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const view = item.getAttribute('data-view');
+        switchView(view);
+      });
+    });
+
+    // Resume handlers
+    document.getElementById('cv-save-resume-btn')?.addEventListener('click', saveResume);
+    document.getElementById('cv-download-resume-btn')?.addEventListener('click', downloadResume);
+
+    // Jobs handlers
+    document.getElementById('cv-add-job-btn')?.addEventListener('click', addJobApplication);
+
+    // Load data when views are shown
+    loadResumeData();
+    loadProgressData();
+    loadJobsData();
   }
 
   /**
@@ -501,6 +1140,281 @@
     const assistant = document.getElementById('careerverse-assistant');
     if (assistant) {
       assistant.style.display = 'none';
+    }
+  }
+
+  /**
+   * Switch between views
+   */
+  function switchView(viewName) {
+    currentView = viewName;
+    
+    // Update nav items
+    document.querySelectorAll('.cv-nav-item').forEach(item => {
+      if (item.getAttribute('data-view') === viewName) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+
+    // Update views
+    document.querySelectorAll('.cv-view').forEach(view => {
+      if (view.id === `cv-${viewName}-view`) {
+        view.classList.add('active');
+      } else {
+        view.classList.remove('active');
+      }
+    });
+
+    // Load data for the view
+    if (viewName === 'resume') {
+      loadResumeData();
+    } else if (viewName === 'progress') {
+      loadProgressData();
+    } else if (viewName === 'jobs') {
+      loadJobsData();
+    }
+  }
+
+  /**
+   * Resume Management
+   */
+  async function saveResume() {
+    const resumeData = {
+      name: document.getElementById('cv-resume-name').value,
+      email: document.getElementById('cv-resume-email').value,
+      phone: document.getElementById('cv-resume-phone').value,
+      summary: document.getElementById('cv-resume-summary').value,
+      skills: document.getElementById('cv-resume-skills').value.split(',').map(s => s.trim()).filter(s => s),
+      experience: document.getElementById('cv-resume-experience').value,
+      education: document.getElementById('cv-resume-education').value,
+      lastUpdated: new Date().toISOString()
+    };
+
+    try {
+      await chrome.storage.local.set({ careerverseResume: resumeData });
+      
+      // Show success feedback
+      const saveBtn = document.getElementById('cv-save-resume-btn');
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = '✅ Saved!';
+      saveBtn.style.background = '#4caf50';
+      setTimeout(() => {
+        saveBtn.textContent = originalText;
+        saveBtn.style.background = '';
+      }, 2000);
+      
+      updateProgressActivity('Resume updated');
+    } catch (error) {
+      console.error('Error saving resume:', error);
+      alert('Error saving resume. Please try again.');
+    }
+  }
+
+  async function loadResumeData() {
+    try {
+      const result = await chrome.storage.local.get(['careerverseResume']);
+      const resume = result.careerverseResume;
+      
+      if (resume) {
+        document.getElementById('cv-resume-name').value = resume.name || '';
+        document.getElementById('cv-resume-email').value = resume.email || '';
+        document.getElementById('cv-resume-phone').value = resume.phone || '';
+        document.getElementById('cv-resume-summary').value = resume.summary || '';
+        document.getElementById('cv-resume-skills').value = resume.skills ? resume.skills.join(', ') : '';
+        document.getElementById('cv-resume-experience').value = resume.experience || '';
+        document.getElementById('cv-resume-education').value = resume.education || '';
+      }
+    } catch (error) {
+      console.error('Error loading resume:', error);
+    }
+  }
+
+  function downloadResume() {
+    const resumeData = {
+      name: document.getElementById('cv-resume-name').value,
+      email: document.getElementById('cv-resume-email').value,
+      phone: document.getElementById('cv-resume-phone').value,
+      summary: document.getElementById('cv-resume-summary').value,
+      skills: document.getElementById('cv-resume-skills').value,
+      experience: document.getElementById('cv-resume-experience').value,
+      education: document.getElementById('cv-resume-education').value
+    };
+
+    // Create a simple text version
+    let resumeText = `RESUME\n`;
+    resumeText += `==================\n\n`;
+    resumeText += `Name: ${resumeData.name}\n`;
+    resumeText += `Email: ${resumeData.email}\n`;
+    resumeText += `Phone: ${resumeData.phone}\n\n`;
+    resumeText += `PROFESSIONAL SUMMARY\n`;
+    resumeText += `${resumeData.summary}\n\n`;
+    resumeText += `SKILLS\n`;
+    resumeText += `${resumeData.skills}\n\n`;
+    resumeText += `EXPERIENCE\n`;
+    resumeText += `${resumeData.experience}\n\n`;
+    resumeText += `EDUCATION\n`;
+    resumeText += `${resumeData.education}\n`;
+
+    // Create blob and download
+    const blob = new Blob([resumeText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `resume_${resumeData.name || 'careerverse'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Progress Management
+   */
+  async function loadProgressData() {
+    try {
+      const [resumeResult, jobsResult, progressResult] = await Promise.all([
+        chrome.storage.local.get(['careerverseResume']),
+        chrome.storage.local.get(['careerverseJobs']),
+        chrome.storage.local.get(['careerverseProgress'])
+      ]);
+
+      const jobs = jobsResult.careerverseJobs || [];
+      const progress = progressResult.careerverseProgress || { activities: [], startDate: new Date().toISOString() };
+
+      // Calculate stats
+      const jobsApplied = jobs.length;
+      const interviews = jobs.filter(j => j.status === 'interview' || j.status === 'offer').length;
+      const resume = resumeResult.careerverseResume;
+      const skillsLearned = resume?.skills?.length || 0;
+      
+      // Calculate days active
+      const startDate = new Date(progress.startDate);
+      const today = new Date();
+      const daysActive = Math.floor((today - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Update stats
+      document.getElementById('cv-stat-jobs-applied').textContent = jobsApplied;
+      document.getElementById('cv-stat-interviews').textContent = interviews;
+      document.getElementById('cv-stat-skills-learned').textContent = skillsLearned;
+      document.getElementById('cv-stat-days-active').textContent = daysActive;
+
+      // Display activities
+      const activityList = document.getElementById('cv-progress-activity');
+      const activities = progress.activities || [];
+      
+      if (activities.length === 0) {
+        activityList.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">No activity yet. Start building your career!</div>';
+      } else {
+        activityList.innerHTML = activities.slice().reverse().slice(0, 10).map(activity => `
+          <div class="cv-item-card">
+            <div class="cv-item-card-header">
+              <div class="cv-item-card-title">${escapeHtml(activity.text)}</div>
+              <div class="cv-item-card-date">${activity.date}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Error loading progress:', error);
+    }
+  }
+
+  async function updateProgressActivity(text) {
+    try {
+      const result = await chrome.storage.local.get(['careerverseProgress']);
+      const progress = result.careerverseProgress || { activities: [], startDate: new Date().toISOString() };
+      
+      progress.activities.push({
+        text: text,
+        date: new Date().toLocaleDateString()
+      });
+
+      // Keep only last 50 activities
+      if (progress.activities.length > 50) {
+        progress.activities = progress.activities.slice(-50);
+      }
+
+      await chrome.storage.local.set({ careerverseProgress: progress });
+      
+      if (currentView === 'progress') {
+        loadProgressData();
+      }
+    } catch (error) {
+      console.error('Error updating progress:', error);
+    }
+  }
+
+  /**
+   * Jobs Management
+   */
+  async function addJobApplication() {
+    const jobTitle = document.getElementById('cv-job-title').value.trim();
+    const company = document.getElementById('cv-job-company').value.trim();
+    const status = document.getElementById('cv-job-status').value;
+    const notes = document.getElementById('cv-job-notes').value.trim();
+
+    if (!jobTitle || !company) {
+      alert('Please fill in job title and company name.');
+      return;
+    }
+
+    try {
+      const result = await chrome.storage.local.get(['careerverseJobs']);
+      const jobs = result.careerverseJobs || [];
+
+      jobs.push({
+        id: Date.now(),
+        title: jobTitle,
+        company: company,
+        status: status,
+        notes: notes,
+        date: new Date().toLocaleDateString()
+      });
+
+      await chrome.storage.local.set({ careerverseJobs: jobs });
+
+      // Clear form
+      document.getElementById('cv-job-title').value = '';
+      document.getElementById('cv-job-company').value = '';
+      document.getElementById('cv-job-status').value = 'applied';
+      document.getElementById('cv-job-notes').value = '';
+
+      // Reload jobs list
+      loadJobsData();
+      updateProgressActivity(`Applied to ${jobTitle} at ${company}`);
+    } catch (error) {
+      console.error('Error adding job:', error);
+      alert('Error adding job application. Please try again.');
+    }
+  }
+
+  async function loadJobsData() {
+    try {
+      const result = await chrome.storage.local.get(['careerverseJobs']);
+      const jobs = result.careerverseJobs || [];
+      const jobsList = document.getElementById('cv-jobs-list');
+
+      if (jobs.length === 0) {
+        jobsList.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">No job applications yet. Add your first application above!</div>';
+      } else {
+        jobsList.innerHTML = jobs.slice().reverse().map(job => `
+          <div class="cv-job-card">
+            <div class="cv-job-card-header">
+              <div>
+                <div class="cv-job-title">${escapeHtml(job.title)}</div>
+                <div class="cv-job-company">${escapeHtml(job.company)}</div>
+              </div>
+              <span class="cv-job-status ${job.status}">${job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>
+            </div>
+            ${job.notes ? `<div class="cv-job-details">${escapeHtml(job.notes)}</div>` : ''}
+            <div class="cv-job-details">Applied on: ${job.date}</div>
+          </div>
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Error loading jobs:', error);
     }
   }
 
@@ -837,5 +1751,6 @@ STRICT GUIDELINES:
   });
 
 })();
+
 
 
