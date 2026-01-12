@@ -1,7 +1,42 @@
 // Content script for CareerVerse AI
-// Leeco AI-style Floating Assistant UI
+// Context extraction + Floating Assistant UI
+const script = document.createElement("script");
+script.src = chrome.runtime.getURL("GSAP.js");   // <-- EXACT filename you are using
+document.head.appendChild(script);
+
 (function() {
   'use strict';
+
+  // ============================================
+  // GEMINI API CONFIGURATION
+  // ============================================
+  // HARD-CODED API KEY FOR PROTOTYPE
+  // 
+  // GET YOUR API KEY:
+  // 1. Visit: https://makersuite.google.com/app/apikey
+  //    OR: https://aistudio.google.com/app/apikey
+  // 2. Sign in with Google account
+  // 3. Click "Create API Key"
+  // 4. Copy the key (starts with "AIza...")
+  // 5. Paste it below replacing the current key
+  //
+  // NOTE: This uses Google AI Studio API key (free tier available)
+  //       The key should work with Gemini Pro model
+  //       If you get API errors, try:
+  //       - Regenerating your API key
+  //       - Checking API quota/limits
+  //       - Verifying the key has proper permissions
+  //
+  const GEMINI_API_KEY = 'AIzaSyACrev6cQPk_SguooBm7eV7yLCQQOtTLAo';
+  // Try different API versions and models if one doesn't work:
+  // Option 1: v1beta with gemini-1.0-pro (stable)
+  const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent';
+  
+  // Option 2: If above doesn't work, try v1 API:
+  // const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent';
+  
+  // Option 3: Try with versioned model names:
+  // const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent';
 
   // ============================================
   // CONTEXT EXTRACTION ENGINE
@@ -20,7 +55,7 @@
     const headings = [];
     const headingElements = document.querySelectorAll('h1, h2, h3');
     headingElements.forEach((el, idx) => {
-      if (idx < 10) {
+      if (idx < 10) { // Limit to first 10 headings
         const text = el.textContent.trim();
         if (text && text.length < 200) {
           headings.push(text);
@@ -32,7 +67,7 @@
     const paragraphs = [];
     const paraElements = document.querySelectorAll('p');
     let totalLength = 0;
-    const maxLength = 1000;
+    const maxLength = 1000; // Limit total text length
 
     for (let i = 0; i < paraElements.length && totalLength < maxLength; i++) {
       const text = paraElements[i].textContent.trim();
@@ -48,10 +83,10 @@
     const codeBlocks = [];
     const codeElements = document.querySelectorAll('pre code, code');
     codeElements.forEach((el, idx) => {
-      if (idx < 5) {
+      if (idx < 5) { // Limit to first 5 code blocks
         const code = el.textContent.trim();
         if (code && code.length > 10 && code.length < 500) {
-          codeBlocks.push(code.substring(0, 300));
+          codeBlocks.push(code.substring(0, 300)); // Truncate long code
         }
       }
     });
@@ -89,9 +124,9 @@
 
   /**
    * Inject CSS styles for floating assistant
-   * Modern, smooth, Leeco AI-style design
    */
   function injectStyles() {
+    // Avoid duplicate injection
     if (document.getElementById('careerverse-styles')) {
       return;
     }
@@ -105,21 +140,18 @@
         right: 20px;
         width: 380px;
         max-height: 600px;
-        background: #ffffff;
-        border-radius: 20px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         display: flex;
         flex-direction: column;
         z-index: 999999;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         overflow: hidden;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        transform: translateY(0);
-        opacity: 1;
+        transition: all 0.3s ease;
       }
       #careerverse-assistant.cv-minimized {
-        max-height: 64px;
-        width: 200px;
+        max-height: 60px;
       }
       #careerverse-assistant.cv-minimized .cv-assistant-body,
       #careerverse-assistant.cv-minimized .cv-assistant-footer {
@@ -132,13 +164,11 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        cursor: move;
-        user-select: none;
       }
       .cv-assistant-title {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         font-weight: 600;
         font-size: 16px;
       }
@@ -146,15 +176,11 @@
         font-size: 24px;
         line-height: 1;
         display: inline-block;
-        animation: cvPulse 2s ease-in-out infinite;
-      }
-      @keyframes cvPulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
+        vertical-align: middle;
       }
       .cv-assistant-controls {
         display: flex;
-        gap: 6px;
+        gap: 8px;
       }
       .cv-btn-minimize, .cv-btn-close {
         background: rgba(255, 255, 255, 0.2);
@@ -162,107 +188,72 @@
         color: white;
         width: 28px;
         height: 28px;
-        border-radius: 8px;
+        border-radius: 6px;
         cursor: pointer;
         font-size: 18px;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
-        font-weight: 300;
+        transition: background 0.2s;
       }
       .cv-btn-minimize:hover, .cv-btn-close:hover {
         background: rgba(255, 255, 255, 0.3);
-        transform: scale(1.1);
       }
       .cv-assistant-body {
         flex: 1;
         overflow-y: auto;
         max-height: 450px;
-        padding: 20px;
+        padding: 16px;
         background: #f8f9fa;
-        scroll-behavior: smooth;
       }
       .cv-welcome-message {
-        background: linear-gradient(135deg, #e8f4f8 0%, #f0f4ff 100%);
-        padding: 14px 16px;
-        border-radius: 14px;
-        margin-bottom: 16px;
+        background: white;
+        padding: 12px 16px;
+        border-radius: 12px;
+        margin-bottom: 12px;
         font-size: 14px;
         color: #555;
-        border-left: 4px solid #667eea;
-        animation: cvSlideIn 0.4s ease;
-      }
-      @keyframes cvSlideIn {
-        from {
-          opacity: 0;
-          transform: translateY(-10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+        border-left: 3px solid #667eea;
       }
       .cv-welcome-message p {
         margin: 0;
-        line-height: 1.5;
       }
       .cv-suggestions {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
         margin-bottom: 16px;
       }
       .cv-suggestion-btn {
         background: white;
-        border: 2px solid #e8e8e8;
-        padding: 12px 16px;
-        border-radius: 12px;
+        border: 1px solid #e0e0e0;
+        padding: 10px 14px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 13px;
         text-align: left;
         color: #333;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        transition: all 0.2s;
       }
       .cv-suggestion-btn:hover {
         border-color: #667eea;
-        background: linear-gradient(135deg, #f0f4ff 0%, #e8f4f8 100%);
+        background: #f0f4ff;
         transform: translateX(4px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-      }
-      .cv-suggestion-btn::before {
-        content: '💡';
-        font-size: 16px;
       }
       .cv-messages {
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 12px;
         min-height: 100px;
       }
       .cv-message {
         padding: 12px 16px;
-        border-radius: 16px;
+        border-radius: 12px;
         max-width: 85%;
         word-wrap: break-word;
         font-size: 14px;
-        line-height: 1.6;
+        line-height: 1.5;
         animation: cvFadeIn 0.3s ease;
-        position: relative;
-      }
-      @keyframes cvFadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
       }
       .cv-message-user {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -272,7 +263,6 @@
         display: flex;
         align-items: flex-start;
         gap: 8px;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
       }
       .cv-message-user::before {
         content: '🧑‍💻';
@@ -285,11 +275,10 @@
         color: #333;
         align-self: flex-start;
         border-bottom-left-radius: 4px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         display: flex;
         align-items: flex-start;
         gap: 8px;
-        border: 1px solid #f0f0f0;
       }
       .cv-message-assistant::before {
         content: '🤖';
@@ -304,16 +293,9 @@
         font-size: 12px;
         max-width: 100%;
         text-align: center;
-        border: none;
-        padding: 10px 14px;
       }
       .cv-message p {
         margin: 0;
-        line-height: 1.7;
-        word-wrap: break-word;
-      }
-      .cv-message p + p {
-        margin-top: 12px;
       }
       .cv-loading {
         display: flex;
@@ -322,7 +304,12 @@
         gap: 8px;
         padding: 16px;
         color: #667eea;
-        font-size: 16px;
+        font-size: 18px;
+      }
+      .cv-loading::before {
+        content: '⏳';
+        font-size: 20px;
+        line-height: 1;
       }
       .cv-loading-dots {
         display: flex;
@@ -343,35 +330,33 @@
         animation-delay: -0.16s;
       }
       @keyframes cvBounce {
-        0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
-        40% { transform: scale(1); opacity: 1; }
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
+      }
+      @keyframes cvFadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
       }
       .cv-assistant-footer {
         padding: 16px;
         background: white;
-        border-top: 1px solid #f0f0f0;
+        border-top: 1px solid #e0e0e0;
       }
       .cv-input-container {
         display: flex;
-        gap: 10px;
-        align-items: center;
+        gap: 8px;
       }
       #cv-chat-input {
         flex: 1;
-        padding: 12px 18px;
-        border: 2px solid #e8e8e8;
+        padding: 12px 16px;
+        border: 2px solid #e0e0e0;
         border-radius: 24px;
         font-size: 14px;
         outline: none;
-        transition: all 0.2s;
-        font-family: inherit;
+        transition: border-color 0.2s;
       }
       #cv-chat-input:focus {
         border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      }
-      #cv-chat-input::placeholder {
-        color: #999;
       }
       .cv-send-btn {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -382,12 +367,11 @@
         cursor: pointer;
         font-size: 18px;
         font-weight: 600;
-        transition: all 0.2s;
+        transition: transform 0.2s, box-shadow 0.2s;
         min-width: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
       }
       .cv-send-btn:hover {
         transform: translateY(-2px);
@@ -401,14 +385,13 @@
       }
       .cv-assistant-body::-webkit-scrollbar-track {
         background: #f1f1f1;
-        border-radius: 3px;
       }
       .cv-assistant-body::-webkit-scrollbar-thumb {
-        background: #ccc;
+        background: #888;
         border-radius: 3px;
       }
       .cv-assistant-body::-webkit-scrollbar-thumb:hover {
-        background: #999;
+        background: #555;
       }
       @media (max-width: 480px) {
         #careerverse-assistant {
@@ -416,7 +399,6 @@
           right: 20px;
           left: 20px;
           max-width: 380px;
-          bottom: 10px;
         }
       }
     `;
@@ -427,10 +409,12 @@
    * Create and inject floating assistant UI
    */
   function createFloatingAssistant() {
+    // Avoid duplicate injection
     if (document.getElementById('careerverse-assistant')) {
       return;
     }
 
+    // Inject styles first
     injectStyles();
 
     const assistant = document.createElement('div');
@@ -524,17 +508,16 @@
   }
 
   /**
-   * Auto-analyze page and show contextual suggestions
+   * Auto-analyze page and show suggestions
    */
   async function autoAnalyzeAndSuggest() {
     const context = extractPageContext();
     const suggestionsContainer = document.getElementById('cv-suggestions');
     const welcomeMsg = document.querySelector('.cv-welcome-message');
 
-    // Update welcome message with page context
+    // Show welcome message
     if (welcomeMsg) {
-      const pageTitle = context.title.length > 50 ? context.title.substring(0, 50) + '...' : context.title;
-      welcomeMsg.innerHTML = `<p>📄 Analyzing: <strong>${escapeHtml(pageTitle)}</strong></p>`;
+      welcomeMsg.innerHTML = `<p>📄 Analyzing: <strong>${context.title.substring(0, 50)}</strong></p>`;
     }
 
     // Generate context-aware suggestions
@@ -542,7 +525,7 @@
     
     if (suggestionsContainer) {
       suggestionsContainer.innerHTML = suggestions.map((s, idx) => `
-        <button class="cv-suggestion-btn" data-suggestion="${idx}">${escapeHtml(s)}</button>
+        <button class="cv-suggestion-btn" data-suggestion="${idx}">${s}</button>
       `).join('');
 
       // Attach click handlers
@@ -554,56 +537,40 @@
       });
     }
 
-    // Auto-send initial contextual greeting
+    // Auto-send initial analysis
     setTimeout(() => {
-      const autoMessage = getAutoMessage(context);
-      sendMessage(autoMessage, true);
+      sendMessage('Analyze this page and provide helpful guidance.', true);
     }, 1000);
   }
 
   /**
-   * Generate context-aware suggestions based on page type
+   * Generate context-aware suggestions
    */
   function generateSuggestions(context) {
     if (context.detectedDomain === 'coding') {
       return [
-        '💡 How should I approach this problem?',
-        '💡 Explain this problem simply',
-        '💡 What concepts should I review?'
+        'Explain this problem simply',
+        'How should I approach this?',
+        'What concepts should I review?'
       ];
     } else if (context.detectedDomain === 'learning') {
       return [
-        '💡 Summarize this lesson',
-        '💡 How should I study this?',
-        '💡 What are the key takeaways?'
+        'Summarize this lesson',
+        'How should I study this?',
+        'What are the key takeaways?'
       ];
     } else if (context.detectedDomain === 'article') {
       return [
-        '💡 Explain this simply',
-        '💡 What are the main points?',
-        '💡 What should I learn next?'
+        'Explain this simply',
+        'What are the main points?',
+        'What should I learn next?'
       ];
     } else {
       return [
-        '💡 Explain this content',
-        '💡 What should I focus on?',
-        '💡 How can I learn more?'
+        'Explain this content',
+        'What should I focus on?',
+        'How can I learn more?'
       ];
-    }
-  }
-
-  /**
-   * Get auto message based on context
-   */
-  function getAutoMessage(context) {
-    if (context.detectedDomain === 'coding') {
-      return 'I can help you understand this coding problem and suggest approaches.';
-    } else if (context.detectedDomain === 'learning') {
-      return 'I can help you learn from this content. Ask me to summarize or explain concepts.';
-    } else if (context.detectedDomain === 'article') {
-      return 'I can help you understand this article. What would you like to know?';
-    } else {
-      return 'I can help you analyze this page. What would you like to know?';
     }
   }
 
@@ -620,7 +587,7 @@
   }
 
   /**
-   * Send message and display response (with placeholder for now)
+   * Send message to Gemini and display response
    */
   async function sendMessage(userMessage, isAuto = false) {
     const messagesContainer = document.getElementById('cv-messages');
@@ -640,130 +607,66 @@
       if (messagesContainer) {
         const systemMsg = document.createElement('div');
         systemMsg.className = 'cv-message cv-message-system';
-        systemMsg.innerHTML = `<p>💭 ${escapeHtml(userMessage)}</p>`;
+        systemMsg.innerHTML = `<p><span class="emoji-inline">💭</span> ${escapeHtml(userMessage)}</p>`;
         messagesContainer.appendChild(systemMsg);
-        scrollToBottom();
       }
     }
 
-    // Show loading
-    if (loadingEl) loadingEl.style.display = 'flex';
-    scrollToBottom();
+    chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
 
-    // Simulate API call delay
-    setTimeout(() => {
+    // Show loading
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    try {
       const context = extractPageContext();
-      const response = generatePlaceholderResponse(userMessage, context);
+      const response = await callGeminiAPI(userMessage, context);
       
       // Hide loading
       if (loadingEl) loadingEl.style.display = 'none';
 
       // Add AI response
       addMessage('assistant', response);
-      scrollToBottom();
-    }, 800 + Math.random() * 400); // Random delay between 800-1200ms
-  }
+      chatHistory.push({ role: 'model', parts: [{ text: response }] });
 
-  /**
-   * Generate placeholder response based on user message and context
-   */
-  function generatePlaceholderResponse(userMessage, context) {
-    const message = userMessage.toLowerCase();
-    
-    // Context-aware responses
-    if (context.detectedDomain === 'coding') {
-      if (message.includes('approach') || message.includes('how')) {
-        return '🤖 I can help you approach this problem! Here\'s a suggested strategy:\n\n1. Understand the problem requirements\n2. Identify the data structures needed\n3. Break it down into smaller subproblems\n4. Test your solution with edge cases\n\nWould you like me to elaborate on any step?';
-      } else if (message.includes('explain') || message.includes('what')) {
-        return '🤖 This appears to be a coding problem. I can help explain the concepts involved and guide you through solving it step by step. What specific part would you like me to clarify?';
-      } else if (message.includes('concept') || message.includes('review')) {
-        return '🤖 Based on this problem, you might want to review concepts like algorithms, data structures, and problem-solving patterns. I can help you identify which topics are most relevant!';
+    } catch (error) {
+      console.error('Gemini API error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        error: error
+      });
+      if (loadingEl) loadingEl.style.display = 'none';
+      
+      // Show detailed error message
+      let errorMsg = 'Sorry, I encountered an error. ';
+      
+      // Try to extract meaningful error information
+      if (error.message) {
+        errorMsg += error.message;
+      } else if (error.toString && error.toString() !== '[object Object]') {
+        errorMsg += error.toString();
+      } else {
+        // Try to stringify the error object
+        try {
+          const errorStr = JSON.stringify(error);
+          if (errorStr && errorStr !== '{}') {
+            errorMsg += errorStr;
+          } else {
+            errorMsg += 'Please check your API key and try again. Open browser console (F12) for details.';
+          }
+        } catch (e) {
+          errorMsg += 'Please check your API key and try again. Open browser console (F12) for details.';
+        }
       }
-    } else if (context.detectedDomain === 'learning') {
-      if (message.includes('summarize') || message.includes('summary')) {
-        return '🤖 I can help summarize this lesson! The key points cover important concepts that will help you understand the topic better. Would you like me to break it down further?';
-      } else if (message.includes('study') || message.includes('learn')) {
-        return '🤖 Here\'s a study approach:\n\n1. Review the main concepts\n2. Practice with examples\n3. Test your understanding\n4. Apply what you\'ve learned\n\nI can provide more specific guidance based on the content!';
-      } else if (message.includes('takeaway') || message.includes('key')) {
-        return '🤖 The main takeaways from this content include core concepts and practical applications. I can help you identify the most important points to remember!';
-      }
-    } else if (context.detectedDomain === 'article') {
-      if (message.includes('explain') || message.includes('what')) {
-        return '🤖 This article discusses important topics. I can help explain the main ideas and how they relate to your career growth. What aspect interests you most?';
-      } else if (message.includes('point') || message.includes('main')) {
-        return '🤖 The main points cover key insights that can help with your professional development. I can break down each point in detail if you\'d like!';
-      } else if (message.includes('learn') || message.includes('next')) {
-        return '🤖 Based on this article, you might want to explore related topics, practice the concepts mentioned, or dive deeper into specific areas. I can suggest a learning path!';
-      }
+      
+      addMessage('assistant', errorMsg);
     }
-
-    // Default response
-    return '🤖 I can help you analyze this page and provide guidance. Based on the content, I can:\n\n• Explain concepts\n• Suggest learning approaches\n• Provide career-related insights\n• Help you understand complex topics\n\nWhat would you like to know more about?';
-  }
-
-  /**
-   * Format text with proper spacing, line breaks, and paragraph separation
-   * Handles:
-   * - Double line breaks → Paragraphs
-   * - Single line breaks → <br>
-   * - Numbered lists (1. 2. 3.)
-   * - Bullet points (• - *)
-   * - Preserves spacing
-   */
-  function formatMessageText(text) {
-    if (!text) return '';
-    
-    // Escape HTML first to prevent XSS
-    let formatted = escapeHtml(text);
-    
-    // Normalize line breaks (handle \r\n, \r, \n)
-    formatted = formatted.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    
-    // Split by double or more line breaks to create paragraphs
-    const paragraphs = formatted.split(/\n\n+/);
-    
-    // Process each paragraph
-    const processedParagraphs = paragraphs.map(para => {
-      para = para.trim();
-      if (!para) return '';
-      
-      // Split by single line breaks
-      const lines = para.split('\n');
-      
-      // Process each line for lists and formatting
-      const processedLines = lines.map((line, index) => {
-        line = line.trim();
-        if (!line) return '';
-        
-        // Check for numbered list (1. 2. 3. etc.) - must start at beginning of line
-        const numberedMatch = line.match(/^(\d+)\.\s+(.+)$/);
-        if (numberedMatch) {
-          return `<div style="margin: 6px 0; padding-left: 4px; line-height: 1.6;"><span style="font-weight: 600; margin-right: 6px;">${numberedMatch[1]}.</span>${numberedMatch[2]}</div>`;
-        }
-        
-        // Check for bullet points (• - *) - must start at beginning of line
-        const bulletMatch = line.match(/^[•\-\*]\s+(.+)$/);
-        if (bulletMatch) {
-          return `<div style="margin: 6px 0; padding-left: 4px; line-height: 1.6;">• ${bulletMatch[1]}</div>`;
-        }
-        
-        // Regular line - add line break if not last line
-        return line;
-      }).filter(line => line); // Remove empty lines
-      
-      return processedLines.join('<br>');
-    }).filter(p => p); // Remove empty paragraphs
-    
-    // Join paragraphs with proper spacing
-    if (processedParagraphs.length === 0) return '';
-    if (processedParagraphs.length === 1) return processedParagraphs[0];
-    
-    return processedParagraphs.join('</p><p style="margin-top: 14px; margin-bottom: 0; line-height: 1.7;">');
   }
 
   /**
    * Add message to chat UI
-   * Formats text with proper spacing, line breaks, and paragraph separation
    */
   function addMessage(role, text) {
     const messagesContainer = document.getElementById('cv-messages');
@@ -771,50 +674,126 @@
 
     const messageDiv = document.createElement('div');
     messageDiv.className = `cv-message cv-message-${role}`;
-    
-    // Format the text
-    const formattedText = formatMessageText(text);
-    
-    // Wrap in paragraph tags
-    messageDiv.innerHTML = `<p style="margin: 0; line-height: 1.7;">${formattedText}</p>`;
-    
-    // Add CSS for better message formatting if not already added
-    if (!document.getElementById('cv-message-formatting')) {
-      const formattingStyle = document.createElement('style');
-      formattingStyle.id = 'cv-message-formatting';
-      formattingStyle.textContent = `
-        .cv-message p {
-          margin: 0;
-          line-height: 1.7;
-          word-wrap: break-word;
-        }
-        .cv-message p + p {
-          margin-top: 12px;
-        }
-        .cv-message br {
-          line-height: 1.7;
-        }
-        .cv-message div {
-          line-height: 1.6;
-        }
-      `;
-      document.head.appendChild(formattingStyle);
-    }
+    messageDiv.innerHTML = `<p>${escapeHtml(text)}</p>`;
     
     messagesContainer.appendChild(messageDiv);
-    scrollToBottom();
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
   }
 
   /**
-   * Scroll chat to bottom
+   * Call Gemini API
    */
-  function scrollToBottom() {
-    const messagesContainer = document.getElementById('cv-messages');
-    const chatBody = document.getElementById('cv-chat-body');
-    if (messagesContainer && chatBody) {
-      setTimeout(() => {
-        chatBody.scrollTop = chatBody.scrollHeight;
-      }, 100);
+  async function callGeminiAPI(userMessage, context) {
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+      throw new Error('Gemini API key not configured. Please set GEMINI_API_KEY in content.js');
+    }
+
+    // Build system prompt
+    const systemPrompt = `You are an intelligent learning and career assistant called CareerVerse AI.
+You analyze what the user is currently doing on a webpage and provide helpful guidance without giving full answers or copyrighted content.
+
+STRICT GUIDELINES:
+- ONLY discuss career growth, skill improvement, job searches, and professional networking.
+- NO PERSONAL TALKS: If the user asks personal questions or unrelated "useless stuff," respond: "I am optimized only for career-related guidance. Let's get back to your professional growth."
+- CRISP & EASY: Provide answers in a crisp, easy-to-read manner. Use bullet points for steps or lists.
+- EXTREME POSITIVITY: Be exceptionally positive and encouraging. Never discourage the user. Even if they struggle, frame it as a stepping stone to success.
+- ACTIVE IMPROVEMENT: Proactively suggest improvements to their current approach or code logic where necessary.
+- CLEAR ROADMAPS: When relevant, provide a clear, short roadmap of "What to do next" to guide their progression.
+- Provide hints, not full solutions for coding problems.
+- Summarize learning content, don't copy it.
+- Be ethical (no cheating, no medical diagnosis).
+- Adapt your response to the context (coding, learning, articles, etc.).`;
+
+    // Build context description
+    let contextText = `Current Page Context:
+- Domain: ${context.domain}
+- Title: ${context.title}
+- Type: ${context.detectedDomain}`;
+
+    if (context.headings.length > 0) {
+      contextText += `\n- Headings: ${context.headings.join(', ')}`;
+    }
+    if (context.textSnippet) {
+      contextText += `\n- Content snippet: ${context.textSnippet}`;
+    }
+    if (context.codeBlocks.length > 0) {
+      contextText += `\n- Code blocks present: Yes`;
+    }
+
+    // Build full prompt
+    const fullPrompt = `${systemPrompt}\n\n${contextText}\n\nUser question: ${userMessage}`;
+
+    try {
+      // Call Gemini API
+      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: fullPrompt }]
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        let errorData = {};
+        try {
+          const responseText = await response.text();
+          console.error('API Error Response:', responseText);
+          errorData = JSON.parse(responseText);
+        } catch (e) {
+          console.error('Could not parse error response:', e);
+          errorData = { error: { message: `HTTP ${response.status}: ${response.statusText}` } };
+        }
+        
+        const errorMessage = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
+        const errorCode = errorData.error?.code || response.status;
+        
+        console.error('API Error Details:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorCode: errorCode,
+          errorMessage: errorMessage,
+          fullError: errorData
+        });
+        
+        // Provide user-friendly error messages
+        if (errorCode === 400) {
+          throw new Error(`Invalid API request: ${errorMessage}. Please check your API key format.`);
+        } else if (errorCode === 401 || errorCode === 403) {
+          throw new Error(`API key error (${errorCode}): ${errorMessage}. Please verify your API key is correct. Get a new key at https://aistudio.google.com/app/apikey`);
+        } else if (errorCode === 429) {
+          throw new Error(`Rate limit exceeded: ${errorMessage}. Please try again later.`);
+        } else {
+          throw new Error(`API error (${errorCode}): ${errorMessage}`);
+        }
+      }
+
+      const data = await response.json();
+      const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      if (!generatedText) {
+        // Check if there's a safety rating issue
+        if (data.candidates?.[0]?.finishReason === 'SAFETY') {
+          throw new Error('Response blocked by safety filters. Please try a different question.');
+        }
+        throw new Error('No response from Gemini API. The model may have been blocked or returned an empty response.');
+      }
+
+      return generatedText;
+    } catch (error) {
+      // Re-throw with more context if it's a network error
+      if (error.name === 'TypeError' && error.message && error.message.includes('fetch')) {
+        throw new Error('Network error: Could not connect to Gemini API. Please check your internet connection and CORS settings.');
+      }
+      // If it's already an Error object with a message, re-throw it
+      if (error instanceof Error) {
+        throw error;
+      }
+      // Otherwise, wrap it in an Error
+      throw new Error(`API call failed: ${error.toString() || JSON.stringify(error)}`);
     }
   }
 
@@ -848,7 +827,7 @@
       const assistant = document.getElementById('careerverse-assistant');
       if (assistant) {
         if (assistant.style.display === 'none') {
-          assistant.style.display = 'flex';
+          assistant.style.display = 'block';
         } else {
           toggleMinimize();
         }
@@ -861,3 +840,5 @@
   });
 
 })();
+
+

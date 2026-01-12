@@ -5,8 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CareerVerse AI</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Additional popup-specific overrides to prevent style conflicts */
+    body {
+      isolation: isolate;
+      position: relative;
+      overflow: hidden;
+    }
+    .container {
+      isolation: isolate;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Hide any content.js injected elements that might leak into popup */
+    #careerverse-assistant,
+    .cv-sidebar,
+    .cv-assistant-header,
+    .cv-main-content,
+    .cv-assistant-body,
+    .cv-assistant-footer {
+      display: none !important;
+      visibility: hidden !important;
+      position: absolute !important;
+      left: -9999px !important;
+      opacity: 0 !important;
+    }
+    /* Ensure tabs don't create overlapping bars */
+    .tabs {
+      position: relative;
+      z-index: 10;
+    }
+    .tab-btn.active::after {
+      z-index: 1;
+    }
+    /* Fix scrollbar positioning */
+    .tab-content {
+      position: relative;
+      z-index: 1;
+    }
+  </style>
 </head>
-<body>
+<body data-popup="true">
   <div class="container">
     <!-- Header -->
     <header class="header">
@@ -16,97 +55,41 @@
 
     <!-- Tab Navigation -->
     <nav class="tabs">
-      <button class="tab-btn active" data-tab="guidance">
-        <span>💡</span> Guidance
-      </button>
-      <button class="tab-btn" data-tab="learn">
-        <span>📚</span> Learn
+      <button class="tab-btn active" data-tab="activity">
+        <span>🧠</span> Activity
       </button>
       <button class="tab-btn" data-tab="resume">
-        <span>📄</span> Resume
+        <span>🧾</span> Resume
       </button>
-      <button class="tab-btn" data-tab="opportunities">
-        <span>🌟</span> Opportunities
+      <button class="tab-btn" data-tab="jobs">
+        <span>💼</span> Jobs
       </button>
     </nav>
 
     <!-- Tab Contents -->
     <div class="tab-content">
-      <!-- Guidance Tab -->
-      <div id="guidance" class="tab-pane active">
+      <!-- Activity Tab -->
+      <div id="activity" class="tab-pane active">
         <div class="section">
-          <h2>Career Detection</h2>
-          <div id="context-info" class="context-box">
-            <p>Analyzing current page...</p>
-          </div>
-          <button id="detect-btn" class="primary-btn">🔍 Detect Career</button>
-          <button id="refresh-context-btn" class="secondary-btn">🔄 Refresh Context</button>
-        </div>
-
-        <div class="section">
-          <h3>Or Select Manually</h3>
-          <select id="manual-career-select" class="career-select">
-            <option value="">-- Choose a career --</option>
-            <option value="software">Software / IT</option>
-            <option value="painting">Painting & Arts</option>
-            <option value="accounts">Accounts & Finance</option>
-            <option value="cooking">Cooking & Culinary</option>
-            <option value="business">Business & Startups</option>
-            <option value="medical">Medical & Healthcare</option>
-            <option value="design">Design & Creative</option>
-            <option value="general">General Career</option>
-          </select>
-        </div>
-
-        <div id="guidance-result" class="guidance-result"></div>
-      </div>
-
-      <!-- Learn Tab -->
-      <div id="learn" class="tab-pane">
-        <div class="section">
-          <h2>Learning Path</h2>
-          <select id="learn-career-select" class="career-select">
-            <option value="">-- Select career to learn about --</option>
-            <option value="software">Software / IT</option>
-            <option value="painting">Painting & Arts</option>
-            <option value="accounts">Accounts & Finance</option>
-            <option value="cooking">Cooking & Culinary</option>
-            <option value="business">Business & Startups</option>
-            <option value="medical">Medical & Healthcare</option>
-            <option value="design">Design & Creative</option>
-            <option value="general">General Career</option>
-          </select>
-          <div id="learn-content" class="learn-content"></div>
+          <h2>📊 Learning Activity</h2>
+          <div id="activity-stats" class="activity-stats"></div>
+          <div id="activity-list" class="activity-list"></div>
         </div>
       </div>
 
       <!-- Resume Tab -->
       <div id="resume" class="tab-pane">
         <div class="section">
-          <h2>Your Resume</h2>
-          <button id="test-firebase-btn" class="secondary-btn" style="background: #4caf50; color: white; margin-bottom: 10px;">✅ Test Firebase Connection</button>
-          <button id="reset-resume-btn" class="secondary-btn">🔄 Reset Resume</button>
-          <div id="firebase-status" style="margin: 10px 0; padding: 10px; border-radius: 6px; font-size: 12px; display: none;"></div>
+          <h2>🧾 Your Resume</h2>
           <div id="resume-content" class="resume-content"></div>
         </div>
       </div>
 
-      <!-- Opportunities Tab -->
-      <div id="opportunities" class="tab-pane">
+      <!-- Jobs Tab -->
+      <div id="jobs" class="tab-pane">
         <div class="section">
-          <h2>Career Opportunities</h2>
-          <select id="opportunities-career-select" class="career-select">
-            <option value="">-- Select career domain --</option>
-            <option value="software">Software / IT</option>
-            <option value="painting">Painting & Arts</option>
-            <option value="accounts">Accounts & Finance</option>
-            <option value="cooking">Cooking & Culinary</option>
-            <option value="business">Business & Startups</option>
-            <option value="medical">Medical & Healthcare</option>
-            <option value="design">Design & Creative</option>
-            <option value="general">General Career</option>
-          </select>
-          <div id="opportunities-content" class="opportunities-content"></div>
+          <h2>💼 Job Recommendations</h2>
+          <div id="jobs-content" class="jobs-content"></div>
         </div>
       </div>
     </div>
